@@ -120,7 +120,7 @@
 
 #if (NCIO_USE == 1)
 
-      filename = "out_highres.nc"
+      filename = "outputdata/out_highres.nc"
       ! Create the netcdf file, write global attributes
       call nc_create(filename)
       call nc_write_attr(filename,"title",                              &
