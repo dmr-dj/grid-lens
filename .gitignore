@@ -29,3 +29,7 @@
 
 # Swap files
 *.swp
+
+# Specific files
+out_highres.nc
+libgrid.a

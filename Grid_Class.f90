@@ -1,4 +1,4 @@
-#define DEBUG 0
+#define DEBUG 1
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 ! dmr  Class defining the grid types and properties
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
@@ -35,11 +35,12 @@
 ! dmr      a non std name exists in the .nc file
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 
-         character(len=str_len) ::                                      &
-                                          lat_name   ="latitude",       &
-                                          lon_name   ="longitude",      &
-                                          latbnd_name="bounds_latitude",&
-                                          lonbnd_name="bounds_longitude"
+         character(len=str_len) ::                                       &
+                                          lat_name   ="latitude",        &
+                                          lon_name   ="longitude",       &
+                                          latbnd_name="bounds_latitude", &
+                                          lonbnd_name="bounds_longitude",&
+                                          g_surf_name="gridbox_area"
 
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 ! dmr   has the grid been initialized?
@@ -53,14 +54,23 @@
 
          logical                :: is_subgrid = .false.
 
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+! dmr   Topographic elevation of the surface grid, mandatory
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
          logical                :: ini_elevation = .true.
          character(len=str_len) :: elevation_name = "topo"
          real(kind=8), dimension(:,:), allocatable :: s_elevation
 
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+! dmr   If not a subgrid, then you may have fractional land cover in the grid possibly
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
          logical                :: ini_landfrac = .false.
          character(len=str_len) :: landfrac_name = "landfrac"
          real(kind=8), dimension(:,:), allocatable :: s_landfrac
 
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+! dmr   On land grids, you certainly may want to drain water at the surface
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
          logical                :: ini_drainage = .false.
          character(len=str_len) :: drainage_name = "drainage"
          real(kind=8), dimension(:,:), allocatable :: s_drainage
@@ -100,7 +110,7 @@
 ! dmr  Local variables ...
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 
-        logical :: base_grid_ok, var_ok
+        logical :: base_grid_ok = .false. , var_ok = .false.
 
         integer :: i,j
 
@@ -141,7 +151,8 @@
              enddo
            enddo
 
-         else
+         else ! not a subgrid
+
            if ( s_grid%ini_landfrac ) then ! do something for that variable
 
              allocate(s_grid%s_landfrac(s_grid%n_lon,s_grid%n_lat))
@@ -152,7 +163,7 @@
            endif
          endif
 #if ( DEBUG == 1 )
-         else ! base_grid_ok F
+         else ! base_grid_ok false = could not initialize base grid metrics
           write(*,*) "Cannot initialize the base grid in s_grid ... !!"
 #endif
 
@@ -178,7 +189,7 @@
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 ! dmr  Local variables
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
-        logical :: file_exists = .false., dims_ok = .false., read_dims = .false.
+        logical :: file_exists = .false., dims_ok = .false., read_dims = .false., read_g_surf = .false.
 
         inquire(file=trim(f_name), exist=file_exists)
 
@@ -208,6 +219,16 @@
 
          if (read_dims) then ! I have finished setting up the metrics of the grid ...
            f_grid%is_defined = .true.
+
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+! dmr   Now need to input the surface area of the boxes into the surface grid
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+           read_g_surf = read_OneVar(f_grid%g_surf_name,f_grid%g_surf,f_grid%n_lon,f_grid%n_lat,f_name)
+
+#if ( DEBUG == 1 )
+           write(*,*) "For the surface area variable success = ", read_g_surf
+           write(*,*) "Test value gives = ", f_grid%g_surf(15,15)
+#endif
 #if ( DEBUG == 1 )
          else ! read_dims F
           write(*,*) "Cannot read metrics for the flat grid"
