@@ -88,6 +88,7 @@ main: $(OBJS)
 lib:  $(OBJS)
 	ar -cvr libgrid.a $(OBJPATH)
 	ranlib libgrid.a
+	mv libgrid.a library/.
 	@echo " "
 	@echo "    libgrid.a is ready."
 	@echo " "
