@@ -76,7 +76,7 @@
 !      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=33.23d0,lat_max=77.5d0,lon_min=346.5d0,lon_max=30.9d0)
 
       succeed = &
-      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=30.00d0,lat_max=85.0d0,lon_min=250.0d0,lon_max=120.0d0)
+      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
 
 !       YLAT = DIMENSION(zoom_grid%nlon,zoom_grid%nlat)
 !       XLONG = DIMENSION(zoom_grid%nlon,zoom_grid%nlat)

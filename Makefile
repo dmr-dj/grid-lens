@@ -93,4 +93,4 @@ lib:  $(OBJS)
 	@echo "    libgrid.a is ready."
 	@echo " "
 clean:
-	rm -f test.x $(objdir)/*.o $(objdir)/*.mod $(objdir)/*.so
+	rm -f test.x $(objdir)/*.o $(objdir)/*.mod $(objdir)/*.so gmon.out
