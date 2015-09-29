@@ -2,6 +2,7 @@
 
 #define DGC_USE 1
 #define NCIO_USE 1
+#define TOMS_760 1
 
       use grid_class, only: surface_grid, surface_grid_init
       use sub_grid_class, only: sub_grid, sub_grid_init
@@ -12,6 +13,10 @@
 
 #if (NCIO_USE == 1)
        USE ncio, only: nc_create, nc_write_attr, nc_write_dim, nc_write
+#endif
+
+#if ( TOMS_760 == 1 )
+      USE Grid_Interpolation, only: rgbi3p
 #endif
 
       implicit none
@@ -27,7 +32,7 @@
       real(kind=8), allocatable, dimension(:,:) :: YLAT, XLONG
       real(kind=8), allocatable, dimension(:,:,:,:) :: tab_dat
       real(kind=8), allocatable, dimension(:,:,:) :: interpolatable, interpolated
-      integer, parameter :: nw = 3, nz = 9, ex = 2, nbmois = 1
+      integer, parameter :: nw = 3, nz = 4, ex = 2, nbmois = 1
       integer :: i,j
       logical :: results
 
@@ -39,6 +44,15 @@
 #endif
 
 #endif
+
+#if ( TOMS_760 == 1 )
+      integer :: md, iyi, ixi, ier, expa = 2
+      real(kind=8), allocatable, dimension(:,:) :: geo_expanded
+      real(kind=8), allocatable, dimension(:) :: geo_latex, geo_lonex
+      real(kind=8) :: dlon
+#endif
+
+
 
 #define LRES 1
 #define HRES 1
@@ -76,7 +90,8 @@
 !      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=33.23d0,lat_max=77.5d0,lon_min=346.5d0,lon_max=30.9d0)
 
       succeed = &
-      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
+!      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
+      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=-89.0d0,lat_max=89.0d0,lon_min=0.0d0,lon_max=360.0d0)
 
 !       YLAT = DIMENSION(zoom_grid%nlon,zoom_grid%nlat)
 !       XLONG = DIMENSION(zoom_grid%nlon,zoom_grid%nlat)
@@ -113,6 +128,55 @@
       write(*,*) "Globality of grids: ", lres_land_grid%is_global, hres_land_grid%is_global
       write(*,*) "Setup of sub_grid = ", succeed
       write(*,*) "Interpolation results", results
+
+#if ( TOMS_760 == 1 )
+
+!dmr need to provide to TOMS_760 an expanded tab in lat, lon to help finding additional data at borders
+
+
+      allocate(geo_lonex(lres_land_grid%n_lon+expa*2))
+
+      geo_lonex(3:lres_land_grid%n_lon+2) = lres_land_grid%p_lons(:)
+      dlon = lres_land_grid%p_lons(lres_land_grid%n_lon) - lres_land_grid%p_lons(lres_land_grid%n_lon-1)
+
+      allocate(geo_expanded(lres_land_grid%n_lon+expa*2, lres_land_grid%n_lat))
+
+      geo_expanded(3:lres_land_grid%n_lon+2,:) = lres_land_grid%s_elevation(:,:)
+
+      geo_lonex(2) = lres_land_grid%p_lons(1)-dlon
+      geo_lonex(1) = lres_land_grid%p_lons(1)-2*dlon
+      geo_lonex(lres_land_grid%n_lon+3) = lres_land_grid%p_lons(lres_land_grid%n_lon)+1*dlon
+      geo_lonex(lres_land_grid%n_lon+4) = lres_land_grid%p_lons(lres_land_grid%n_lon)+2*dlon
+
+      geo_expanded(2,:) = lres_land_grid%s_elevation(lres_land_grid%n_lon,:)
+      geo_expanded(1,:) = lres_land_grid%s_elevation(lres_land_grid%n_lon-1,:)
+      geo_expanded(lres_land_grid%n_lon+3,:) = lres_land_grid%s_elevation(1,:)
+      geo_expanded(lres_land_grid%n_lon+4,:) = lres_land_grid%s_elevation(2,:)
+
+      write(*,*) geo_lonex
+      read(*,*)
+
+      DO  iyi = 1, zoom_grid%n_lat
+        DO  ixi = 1, zoom_grid%n_lon
+          IF (ixi == 1.AND.iyi == 1) THEN
+            md = 1
+          ELSE
+            md = 2
+          END IF
+
+          CALL rgbi3p(md,lres_land_grid%n_lon+2*expa,lres_land_grid%n_lat, geo_lonex ,lres_land_grid%p_lats &
+                     ,geo_expanded, 1, zoom_grid%p_lons(ixi), zoom_grid%p_lats(iyi), interpolated(ixi,iyi,1), ier)
+          IF (ier > 0) STOP
+!          dzi(ixi,iyi) = zi(ixi,iyi) - zie(ixi,iyi)
+        END DO
+      END DO
+
+!      write(*,*) "test", lres_land_grid%s_elevation -           &
+!                 RESHAPE(RESHAPE(lres_land_grid%s_elevation,    &
+!                  (/lres_land_grid%n_lon*lres_land_grid%n_lat/)),(/lres_land_grid%n_lon,lres_land_grid%n_lat/))
+
+      write(*,*) "result TOMS_760", ier
+#endif
 
 !-----|--1---------2---------3---------4---------5---------6---------7---------8---------9---------0---------1---------2----------|
 ! cdmr --- try writing out the results in a netCDF file ...
