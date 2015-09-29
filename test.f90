@@ -2,7 +2,7 @@
 
 #define DGC_USE 1
 #define NCIO_USE 1
-#define TOMS_760 0
+#define TOMS_760 1
 
       use grid_class, only: surface_grid, surface_grid_init
       use sub_grid_class, only: sub_grid, sub_grid_init
@@ -49,7 +49,7 @@
 #if ( TOMS_760 == 1 )
       integer :: md, iyi, ixi, ier, expa = 2
       real(kind=8), allocatable, dimension(:,:) :: geo_expanded
-      real(kind=8), allocatable, dimension(:) :: geo_latex, geo_lonex
+      real(kind=8), allocatable, dimension(:) :: geo_lonex  !!, geo_latex
       real(kind=8) :: dlon
 #endif
 
@@ -149,20 +149,24 @@
 
       allocate(geo_expanded(lres_land_grid%n_lon+expa*2, lres_land_grid%n_lat))
 
-      geo_expanded(3:lres_land_grid%n_lon+2,:) = lres_land_grid%s_elevation(:,:)
+      ! geo_expanded(3:lres_land_grid%n_lon+2,:) = lres_land_grid%s_elevation(:,:)
+      geo_expanded(3:lres_land_grid%n_lon+2,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(:,:)
 
       geo_lonex(2) = lres_land_grid%p_lons(1)-dlon
       geo_lonex(1) = lres_land_grid%p_lons(1)-2*dlon
       geo_lonex(lres_land_grid%n_lon+3) = lres_land_grid%p_lons(lres_land_grid%n_lon)+1*dlon
       geo_lonex(lres_land_grid%n_lon+4) = lres_land_grid%p_lons(lres_land_grid%n_lon)+2*dlon
 
-      geo_expanded(2,:) = lres_land_grid%s_elevation(lres_land_grid%n_lon,:)
-      geo_expanded(1,:) = lres_land_grid%s_elevation(lres_land_grid%n_lon-1,:)
-      geo_expanded(lres_land_grid%n_lon+3,:) = lres_land_grid%s_elevation(1,:)
-      geo_expanded(lres_land_grid%n_lon+4,:) = lres_land_grid%s_elevation(2,:)
-
+      ! geo_expanded(2,:) = lres_land_grid%s_elevation(lres_land_grid%n_lon,:)
+      geo_expanded(2,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(lres_land_grid%n_lon,:)
+      ! geo_expanded(1,:) = lres_land_grid%s_elevation(lres_land_grid%n_lon-1,:)
+      geo_expanded(1,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(lres_land_grid%n_lon-1,:)
+      !geo_expanded(lres_land_grid%n_lon+3,:) = lres_land_grid%s_elevation(1,:)
+      geo_expanded(lres_land_grid%n_lon+3,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(1,:)
+      !geo_expanded(lres_land_grid%n_lon+4,:) = lres_land_grid%s_elevation(2,:)
+      geo_expanded(lres_land_grid%n_lon+4,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(2,:)
       write(*,*) geo_lonex
-      read(*,*)
+      ! read(*,*)
 
       DO  iyi = 1, zoom_grid%n_lat
         DO  ixi = 1, zoom_grid%n_lon
