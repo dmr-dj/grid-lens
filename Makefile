@@ -30,9 +30,9 @@ BINFAGS =
 
 LIBS= $(LIBNCIO) $(LIBNETCDF)
 
-DFLAGS = -O3 -cpp -ffixed-line-length-132 -fno-align-commons
+DFLAGS = -O3 -cpp -ffixed-line-length-132 -fno-align-commons -fdefault-real-8 -fdefault-double-8
 ifeq ($(debug), 1)
-    DFLAGS  = -g -pg -cpp -Wall -ffixed-line-length-132 -fno-align-commons
+    DFLAGS  = -g -pg -cpp -Wall -ffixed-line-length-132 -fno-align-commons -fdefault-real-8 -fdefault-double-8
 # -w -p -ggdb -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -fcheck=all
 endif
 
@@ -55,6 +55,7 @@ endif
 
 
 SRC     = \
+        toms760.f90 \
         Grid_utils.f90 \
 	Grid_Class.f90 \
         Sub_Grid_Class.f90\
