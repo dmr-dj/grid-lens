@@ -4,7 +4,7 @@
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
       module sub_grid_class
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
-      use grid_class, only: surface_grid
+      use grid_class, only: surface_grid, surface_var
 
       implicit none
 
@@ -310,22 +310,29 @@
 !      3 -> Initialize the surface_grid of the sub_grid (i.e. copy the given variables of h_grid on its portion subg
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 
-        if (h_grid%ini_elevation) then
+!        if (h_grid%ini_elevation) then
+        if (h_grid%surf_grid_vars(h_grid%indx_elevation)%ini_var) then
 
-          allocate(subg%s_elevation(subg%n_lon,subg%n_lat))
+!          allocate(subg%s_elevation(subg%n_lon,subg%n_lat))
 
+          allocate(subg%surf_grid_vars(subg%indx_elevation)%var_data(subg%n_lon,subg%n_lat))
           if (clon_min.gt.clon_max) then ! case where the minimum is before zero line ...
 
-            subg%s_elevation(1:(h_grid%n_lon-clon_min+1),:)             &
-              = h_grid%s_elevation(clon_min:h_grid%n_lon,clat_min:clat_max)
+!            subg%s_elevation(1:(h_grid%n_lon-clon_min+1),:)             &
+!              = h_grid%s_elevation(clon_min:h_grid%n_lon,clat_min:clat_max)
+            subg%surf_grid_vars(subg%indx_elevation)%var_data(1:(h_grid%n_lon-clon_min+1),:)                  &
+             = h_grid%surf_grid_vars(h_grid%indx_elevation)%var_data(clon_min:h_grid%n_lon,clat_min:clat_max)
 
-            subg%s_elevation((h_grid%n_lon-clon_min+2):subg%n_lon,:)    &
-                                  = h_grid%s_elevation(1:clon_max,clat_min:clat_max)
+!            subg%s_elevation((h_grid%n_lon-clon_min+2):subg%n_lon,:)    &
+!                                  = h_grid%s_elevation(1:clon_max,clat_min:clat_max)
+            subg%surf_grid_vars(subg%indx_elevation)%var_data((h_grid%n_lon-clon_min+2):subg%n_lon,:)    &
+               = h_grid%surf_grid_vars(h_grid%indx_elevation)%var_data(1:clon_max,clat_min:clat_max)
 
           else
 
-            subg%s_elevation(:,:) = h_grid%s_elevation(clon_min:clon_max,clat_min:clat_max)
-
+            !subg%s_elevation(:,:) = h_grid%s_elevation(clon_min:clon_max,clat_min:clat_max)
+            subg%surf_grid_vars(subg%indx_elevation)%var_data(:,:) =                                     &
+               h_grid%surf_grid_vars(h_grid%indx_elevation)%var_data(clon_min:clon_max,clat_min:clat_max)
           endif
 
         endif ! ini_elevation
@@ -376,8 +383,13 @@
            endif
 
            subg%nb_child_points(prec_i,prec_j) = subg%nb_child_points(prec_i,prec_j) + 1
-           subg%min_elevation(prec_i,prec_j) = min(subg%min_elevation(prec_i,prec_j),subg%s_elevation(i,j))
-           subg%max_elevation(prec_i,prec_j) = max(subg%max_elevation(prec_i,prec_j),subg%s_elevation(i,j))
+!           subg%min_elevation(prec_i,prec_j) = min(subg%min_elevation(prec_i,prec_j),subg%s_elevation(i,j))
+!           subg%max_elevation(prec_i,prec_j) = max(subg%max_elevation(prec_i,prec_j),subg%s_elevation(i,j))
+
+           subg%min_elevation(prec_i,prec_j) =                                   &
+                min(subg%min_elevation(prec_i,prec_j),subg%surf_grid_vars(subg%indx_elevation)%var_data(i,j))
+           subg%max_elevation(prec_i,prec_j) =                                   &
+                max(subg%max_elevation(prec_i,prec_j),subg%surf_grid_vars(subg%indx_elevation)%var_data(i,j))     
 !           write(*,*) subg%min_elevation(prec_i,prec_j), subg%max_elevation(prec_i,prec_j)
 
          enddo
