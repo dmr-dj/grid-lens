@@ -2,7 +2,7 @@
 
 #define DGC_USE 1
 #define NCIO_USE 1
-#define TOMS_760 1
+#define TOMS_760 0
 
       use grid_class, only: surface_grid, surface_grid_init
       use sub_grid_class, only: sub_grid, sub_grid_init
@@ -21,11 +21,12 @@
 
       implicit none
 
-      type(surface_grid), target :: lres_land_grid, hres_land_grid
+      type(surface_grid) :: lres_land_grid, hres_land_grid
       type(sub_grid)     :: zoom_grid
-      logical :: succeed
+      logical            :: succeed = .false.
       character(len=256) :: input_file, input_file_l
       character(len=256), parameter     :: directory = "inputdata/"
+      character(len=256) :: varname
 
 
 #if (DGC_USE == 1)
@@ -74,7 +75,17 @@
 !      lres_land_grid%latbnd_name = "bounds_lat"
 !      lres_land_grid%lon_name = "lon"
 !      lres_land_grid%lonbnd_name = "bounds_lon"
-      lres_land_grid%elevation_name = "topo"
+
+!      lres_land_grid%elevation_name = "topo"
+
+      varname = "topo"
+      succeed = lres_land_grid%set_nvars(1)
+      succeed = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_init(.true.,varname)
+
+      varname = "topo"
+      succeed = hres_land_grid%set_nvars(1)
+      succeed = hres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_init(.true.,varname)
+
 #endif
 
       hres_land_grid%is_subgrid = .true.
@@ -92,11 +103,6 @@
       succeed = &
 !      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
       sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=-89.0d0,lat_max=89.0d0,lon_min=0.0d0,lon_max=360.0d0)
-
-!       YLAT = DIMENSION(zoom_grid%nlon,zoom_grid%nlat)
-!       XLONG = DIMENSION(zoom_grid%nlon,zoom_grid%nlat)
-!       INTEGER, PARAMETER :: nw = 3, nz = 9, ex = 2
-!       tab_dat == REAL(KIND=8), DIMENSION(zoom_grid%nlon,zoom_grid%nlat,nw,nz) :: tab_dat
 
 #if (DGC_USE == 1)
 
@@ -118,7 +124,8 @@
       allocate(interpolatable(lres_land_grid%n_lon,lres_land_grid%n_lat,nbmois))
       allocate(interpolated(zoom_grid%n_lon,zoom_grid%n_lat,nbmois))
 
-      interpolatable(:,:,1) = lres_land_grid%s_elevation
+!      interpolatable(:,:,1) = lres_land_grid%s_elevation
+      interpolatable(:,:,1) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(:,:)
 
       results = interpolate(tab_dat,interpolatable,interpolated,zoom_grid%n_lon,zoom_grid%n_lat,nw,nz,lres_land_grid%n_lon &
                            ,lres_land_grid%n_lat,nbmois)
@@ -127,8 +134,9 @@
 
       write(*,*) "Globality of grids: ", lres_land_grid%is_global, hres_land_grid%is_global
       write(*,*) "Setup of sub_grid = ", succeed
+#if (DGC_USE == 1)
       write(*,*) "Interpolation results", results
-
+#endif
 #if ( TOMS_760 == 1 )
 
 !dmr need to provide to TOMS_760 an expanded tab in lat, lon to help finding additional data at borders
@@ -199,7 +207,8 @@
       call nc_write_dim(filename,"y",x=zoom_grid%p_lats(:),units="degrees_north",axis="Y")
 
       call nc_write(filename,"lres_topo",interpolated(:,:,1),dim1="x",dim2="y")
-      call nc_write(filename,"hres_topo",zoom_grid%s_elevation(:,:),dim1="x",dim2="y")
+!      call nc_write(filename,"hres_topo",zoom_grid%s_elevation(:,:),dim1="x",dim2="y")
+      call nc_write(filename,"hres_topo",zoom_grid%surf_grid_vars(zoom_grid%indx_elevation)%var_data(:,:),dim1="x",dim2="y")
 
 #endif
       end program test

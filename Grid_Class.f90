@@ -50,33 +50,94 @@
 
       end type flat_grid
 
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+! dmr  Variable on a surface_grid
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+      type surface_var
+
+         logical                  :: ini_var = .false.
+         character(len=str_len)   :: var_name = " ", f_name = "  "
+         real(kind=8), dimension(:,:), allocatable :: var_data
+
+         contains
+
+         procedure :: var_init => set_fields_surf_var
+
+      end type surface_var
+
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+! dmr   Surface_grid is an extension of the flat_grid type, adding the sub_grid capability and the variables
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+
       type, extends (flat_grid) :: surface_grid
 
          logical                :: is_subgrid = .false.
 
+         integer                :: nb_vars = 1
+
+         type(surface_var), dimension(1) :: surf_grid_vars
+
+! dmr For now, I need this conventional indexing of the different variables, though not limiting.
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 ! dmr   Topographic elevation of the surface grid, mandatory
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
-         logical                :: ini_elevation = .true.
-         character(len=str_len) :: elevation_name = "topo"
-         real(kind=8), dimension(:,:), allocatable :: s_elevation
-
+         integer                 :: indx_elevation = 1
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 ! dmr   If not a subgrid, then you may have fractional land cover in the grid possibly
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
-         logical                :: ini_landfrac = .false.
-         character(len=str_len) :: landfrac_name = "landfrac"
-         real(kind=8), dimension(:,:), allocatable :: s_landfrac
-
+         integer                 :: indx_landfrac  = 2
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 ! dmr   On land grids, you certainly may want to drain water at the surface
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
-         logical                :: ini_drainage = .false.
-         character(len=str_len) :: drainage_name = "drainage"
-         real(kind=8), dimension(:,:), allocatable :: s_drainage
+         integer                 :: indx_drainage  = 3
+
+!        logical                :: ini_elevation = .true.
+!         character(len=str_len) :: elevation_name = "topo"
+!         real(kind=8), dimension(:,:), allocatable :: s_elevation
+!
+!         logical                :: ini_landfrac = .false.
+!         character(len=str_len) :: landfrac_name = "landfrac"
+!         real(kind=8), dimension(:,:), allocatable :: s_landfrac
+!
+!        logical                :: ini_drainage = .false.
+!        character(len=str_len) :: drainage_name = "drainage"
+!        real(kind=8), dimension(:,:), allocatable :: s_drainage
+
+        contains
+
+          procedure :: set_nvars => set_number_vars
+
       end type surface_grid
 
       contains
+
+      function set_number_vars(this,int_val) result(set_nvars)
+
+        class(surface_grid), intent(inout) :: this
+        integer            , intent(in)    :: int_val
+
+        logical                            :: set_nvars
+
+        this%nb_vars = int_val
+!        allocate(this%surf_grid_vars(1:this%nb_vars))
+        set_nvars = .true.
+
+      end function set_number_vars
+
+      function set_fields_surf_var(this,ini,namee) result(var_init)
+
+        class(surface_var), intent(inout) :: this
+        character(len=str_len), intent(in) :: namee
+        logical,                intent(in) :: ini
+
+        logical                            :: var_init
+
+        this%ini_var  = ini
+        this%var_name = namee
+        var_init      = .true.
+
+      end function set_fields_surf_var
+
 
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 ! dmr   Module methods to work on the grids
@@ -112,56 +173,76 @@
 
         logical :: base_grid_ok = .false. , var_ok = .false.
 
-        integer :: i,j
+        integer :: i   !,j
 
         base_grid_ok = s_grid%is_defined
 
-        if ( .not. s_grid%is_defined ) then ! basic grid is not defined ... please init!
+        if ( .not. base_grid_ok ) then ! basic grid is not defined ... please init!
           if ( present(fg_name) ) then ! use fg_name for the metrics
-            base_grid_ok = flat_grid_init(s_grid%flat_grid,fg_name)
+            base_grid_ok = flat_grid_init(s_grid,fg_name)
           else ! assume that the metrics are in the same file as the other characteristics
-            base_grid_ok = flat_grid_init(s_grid%flat_grid,fs_name)
+            base_grid_ok = flat_grid_init(s_grid,fs_name)
           endif
         endif
 
         if ( base_grid_ok ) then
 
-         if ( s_grid%ini_elevation ) then ! do something for that variable
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
+! dmr   Allocate the arrays of type surface_variable
+!-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 
-           allocate(s_grid%s_elevation(s_grid%n_lon,s_grid%n_lat))
+!        allocate(s_grid%surf_grid_vars(s_grid%nb_vars))
+! dmr 2015-09-29 -> moved to the type-bound function of surface_var
 
-           var_ok = read_OneVar(s_grid%elevation_name,s_grid%s_elevation&
-                 ,s_grid%n_lon,s_grid%n_lat,fs_name)
+         do i=1, s_grid%nb_vars
+            if (s_grid%surf_grid_vars(i)%ini_var) then ! need to initialize that variable on the grid
 
-         endif
+              allocate(s_grid%surf_grid_vars(i)%var_data(1:s_grid%n_lon,1:s_grid%n_lat))
 
-         if ( s_grid%is_subgrid ) then ! this is a subgrid, no landfrac variable to be read
+              var_ok = read_OneVar(s_grid%surf_grid_vars(i)%var_name,s_grid%surf_grid_vars(i)%var_data,                         &
+                                   s_grid%n_lon,s_grid%n_lat,fs_name)
+            endif
+         enddo
 
-           s_grid%ini_landfrac = .true.
+!         if ( s_grid%ini_elevation ) then ! do something for that variable
+!
+!           allocate(s_grid%s_elevation(s_grid%n_lon,s_grid%n_lat))
+!
+!           var_ok = read_OneVar(s_grid%elevation_name,s_grid%s_elevation&
+!                 ,s_grid%n_lon,s_grid%n_lat,fs_name)
+!
+!         endif
 
-           allocate(s_grid%s_landfrac(s_grid%n_lon,s_grid%n_lat))
+! -dmr ### This piece of code need to be updated to take into account the new classes
+! -dmr ### for now, it is commented before doing better
 
-           do j=LBOUND(s_grid%s_elevation,1), UBOUND(s_grid%s_elevation,1)
-             do i=LBOUND(s_grid%s_elevation,2), UBOUND(s_grid%s_elevation,2)
-               if (s_grid%s_elevation(j,i).GT.0.0d0) then
-                 s_grid%s_landfrac(j,i) = 1.0d0
-               else
-                 s_grid%s_landfrac(j,i) = 0.0d0
-               endif
-             enddo
-           enddo
-
-         else ! not a subgrid
-
-           if ( s_grid%ini_landfrac ) then ! do something for that variable
-
-             allocate(s_grid%s_landfrac(s_grid%n_lon,s_grid%n_lat))
-
-             var_ok = read_OneVar(s_grid%landfrac_name,s_grid%s_landfrac  &
-                 ,s_grid%n_lon,s_grid%n_lat,fs_name)
-
-           endif
-         endif
+!         if ( s_grid%is_subgrid ) then ! this is a subgrid, no landfrac variable to be read
+!
+!           s_grid%ini_landfrac = .true.
+!
+!           allocate(s_grid%s_landfrac(s_grid%n_lon,s_grid%n_lat))
+!
+!           do j=LBOUND(s_grid%s_elevation,1), UBOUND(s_grid%s_elevation,1)
+!             do i=LBOUND(s_grid%s_elevation,2), UBOUND(s_grid%s_elevation,2)
+!               if (s_grid%s_elevation(j,i).GT.0.0d0) then
+!                 s_grid%s_landfrac(j,i) = 1.0d0
+!               else
+!                 s_grid%s_landfrac(j,i) = 0.0d0
+!               endif
+!             enddo
+!           enddo
+!
+!         else ! not a subgrid
+!
+!           if ( s_grid%ini_landfrac ) then ! do something for that variable
+!
+!             allocate(s_grid%s_landfrac(s_grid%n_lon,s_grid%n_lat))
+!
+!             var_ok = read_OneVar(s_grid%landfrac_name,s_grid%s_landfrac  &
+!                 ,s_grid%n_lon,s_grid%n_lat,fs_name)
+!
+!           endif
+!         endif
 #if ( DEBUG == 1 )
          else ! base_grid_ok false = could not initialize base grid metrics
           write(*,*) "Cannot initialize the base grid in s_grid ... !!"
@@ -183,8 +264,8 @@
 ! dmr   By reference variables ...
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 
-        type(flat_grid), intent(inout)     :: f_grid ! the flat grid variable
-        character(len=str_len), intent(in) :: f_name ! netCDF file name to read in the grid from
+        class(flat_grid), intent(inout)     :: f_grid ! the flat grid variable
+        character(len=str_len), intent(in)  :: f_name ! netCDF file name to read in the grid from
 
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 ! dmr  Local variables
@@ -389,6 +470,7 @@
 #if ( DEBUG == 1 )
       write(*,*) "File used: ", trim(f_name)
       write(*,*) "Variable sought: ", trim(f_grid%lat_name)
+      write(*,*) "Variable sought: ", trim(f_grid%lon_name)
 #endif
 
       f_grid%n_lat = nc_size(f_name,f_grid%lat_name)
