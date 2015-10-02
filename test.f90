@@ -1,6 +1,6 @@
       program test
 
-#define DGC_USE 1
+#define DGC_USE 0
 #define NCIO_USE 1
 #define TOMS_760 2
 
@@ -36,10 +36,10 @@
       real(kind=8), allocatable, dimension(:,:) :: YLAT, XLONG
       real(kind=8), allocatable, dimension(:,:,:,:) :: tab_dat
       real(kind=8), allocatable, dimension(:,:,:) :: interpolatable, interpolated
-      integer, parameter :: nw = 3, nz = 4, ex = 2, nbmois = 1
+      integer, parameter :: nw = 3, nz = 4, ex = 2
       integer :: i,j
       logical :: results
-
+#endif
 #if (NCIO_USE == 1)
 !-----|--1--------2---------3---------4---------5---------6---------7-|
 !       Added for output with NCIO
@@ -47,6 +47,9 @@
        character(len=256) :: filename
 #endif
 
+#if ( DGC_USE == 1 || TOMS_760 > 0 )
+      real(kind=8), allocatable, dimension(:,:,:) :: interpolated
+      integer, parameter :: nbmois = 1
 #endif
 
 #if ( TOMS_760 == 1 )
@@ -128,7 +131,6 @@
                ,lres_land_grid%p_lons,YLAT,XLONG,nw,nz,ex,tab_dat)
 
       allocate(interpolatable(lres_land_grid%n_lon,lres_land_grid%n_lat,nbmois))
-      allocate(interpolated(zoom_grid%n_lon,zoom_grid%n_lat,nbmois))
 
 !      interpolatable(:,:,1) = lres_land_grid%s_elevation
       interpolatable(:,:,1) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(:,:)
@@ -137,6 +139,11 @@
                            ,lres_land_grid%n_lat,nbmois)
 
 #endif
+
+#if ( DGC_USE == 1 || TOMS_760 > 0 )
+      allocate(interpolated(zoom_grid%n_lon,zoom_grid%n_lat,nbmois))
+#endif      
+
 
       write(*,*) "Globality of grids: ", lres_land_grid%is_global, hres_land_grid%is_global
       write(*,*) "Setup of sub_grid = ", succeed
