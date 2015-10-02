@@ -2,7 +2,7 @@
 
 #define DGC_USE 1
 #define NCIO_USE 1
-#define TOMS_760 1
+#define TOMS_760 2
 
       use grid_class, only: surface_grid, surface_grid_init
       use sub_grid_class, only: sub_grid, sub_grid_init
@@ -16,7 +16,10 @@
 #endif
 
 #if ( TOMS_760 == 1 )
-      USE Grid_Interpolation, only: rgbi3p
+      use Grid_Interpolation, only: rgbi3p
+#endif
+#if ( TOMS_760 == 2 )
+      use toms760_wrapper, only: bicubic_interpol
 #endif
 
       implicit none
@@ -52,7 +55,10 @@
       real(kind=8), allocatable, dimension(:) :: geo_lonex  !!, geo_latex
       real(kind=8) :: dlon
 #endif
-
+#if ( TOMS_760 == 2 )
+      integer :: resulting_val, val_indx
+      real(kind=8), allocatable, dimension(:,:) :: interpol_one
+#endif
 
 
 #define LRES 1
@@ -101,8 +107,8 @@
 !      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=33.23d0,lat_max=77.5d0,lon_min=346.5d0,lon_max=30.9d0)
 
       succeed = &
-!      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
-      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=-89.0d0,lat_max=89.0d0,lon_min=0.0d0,lon_max=360.0d0)
+      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
+!      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=-89.0d0,lat_max=89.0d0,lon_min=0.0d0,lon_max=360.0d0)
 
 #if (DGC_USE == 1)
 
@@ -188,6 +194,12 @@
 !                  (/lres_land_grid%n_lon*lres_land_grid%n_lat/)),(/lres_land_grid%n_lon,lres_land_grid%n_lat/))
 
       write(*,*) "result TOMS_760", ier
+#endif
+#if ( TOMS_760 == 2 )
+      val_indx = lres_land_grid%indx_elevation
+      resulting_val = bicubic_interpol(lres_land_grid, zoom_grid, interpol_one, val_indx)
+      interpolated(:,:,1) = interpol_one(:,:)
+      deallocate(interpol_one)
 #endif
 
 !-----|--1---------2---------3---------4---------5---------6---------7---------8---------9---------0---------1---------2----------|
