@@ -55,13 +55,14 @@ endif
 
 
 SRC     = \
-        toms760.f90 \
-        toms760-wrapper.f90 \
         Grid_utils.f90 \
         Grid_Class.f90 \
         Sub_Grid_Class.f90\
+        toms760-wrapper.f90 \
         distance_great_circle.f90\
         interpolate_mod.f90
+
+#         toms760.f90
 
 OBJS    = $(SRC:.f90=.o)
 MODS    = ${SRC:.f90=.mod}

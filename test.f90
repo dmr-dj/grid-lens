@@ -2,7 +2,7 @@
 
 #define DGC_USE 0
 #define NCIO_USE 1
-#define TOMS_760 2
+#define TOMS_760 1
 
       use grid_class, only: surface_grid, surface_grid_init
       use sub_grid_class, only: sub_grid, sub_grid_init
@@ -16,9 +16,6 @@
 #endif
 
 #if ( TOMS_760 == 1 )
-      use Grid_Interpolation, only: rgbi3p
-#endif
-#if ( TOMS_760 == 2 )
       use toms760_wrapper, only: bicubic_interpol
 #endif
 
@@ -53,12 +50,6 @@
 #endif
 
 #if ( TOMS_760 == 1 )
-      integer :: md, iyi, ixi, ier, expa = 2
-      real(kind=8), allocatable, dimension(:,:) :: geo_expanded
-      real(kind=8), allocatable, dimension(:) :: geo_lonex  !!, geo_latex
-      real(kind=8) :: dlon
-#endif
-#if ( TOMS_760 == 2 )
       integer :: resulting_val, val_indx
       real(kind=8), allocatable, dimension(:,:) :: interpol_one
 #endif
@@ -80,12 +71,6 @@
 #endif
 
 #if ( LRES == 1 ) /*  ECBilt grid has different names for the axes */
-!      lres_land_grid%lat_name = "lat"
-!      lres_land_grid%latbnd_name = "bounds_lat"
-!      lres_land_grid%lon_name = "lon"
-!      lres_land_grid%lonbnd_name = "bounds_lon"
-
-!      lres_land_grid%elevation_name = "topo"
 
       varname = "topo"
       succeed = lres_land_grid%set_nvars(1)
@@ -110,8 +95,8 @@
 !      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=33.23d0,lat_max=77.5d0,lon_min=346.5d0,lon_max=30.9d0)
 
       succeed = &
-      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
-!      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=-89.0d0,lat_max=89.0d0,lon_min=0.0d0,lon_max=360.0d0)
+      !sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
+      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=-89.0d0,lat_max=89.0d0,lon_min=0.0d0,lon_max=360.0d0)
 
 #if (DGC_USE == 1)
 
@@ -132,12 +117,10 @@
 
       allocate(interpolatable(lres_land_grid%n_lon,lres_land_grid%n_lat,nbmois))
 
-!      interpolatable(:,:,1) = lres_land_grid%s_elevation
       interpolatable(:,:,1) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(:,:)
 
       results = interpolate(tab_dat,interpolatable,interpolated,zoom_grid%n_lon,zoom_grid%n_lat,nw,nz,lres_land_grid%n_lon &
                            ,lres_land_grid%n_lat,nbmois)
-
 #endif
 
 #if ( DGC_USE == 1 || TOMS_760 > 0 )
@@ -150,59 +133,8 @@
 #if (DGC_USE == 1)
       write(*,*) "Interpolation results", results
 #endif
+
 #if ( TOMS_760 == 1 )
-
-!dmr need to provide to TOMS_760 an expanded tab in lat, lon to help finding additional data at borders
-
-
-      allocate(geo_lonex(lres_land_grid%n_lon+expa*2))
-
-      geo_lonex(3:lres_land_grid%n_lon+2) = lres_land_grid%p_lons(:)
-      dlon = lres_land_grid%p_lons(lres_land_grid%n_lon) - lres_land_grid%p_lons(lres_land_grid%n_lon-1)
-
-      allocate(geo_expanded(lres_land_grid%n_lon+expa*2, lres_land_grid%n_lat))
-
-      ! geo_expanded(3:lres_land_grid%n_lon+2,:) = lres_land_grid%s_elevation(:,:)
-      geo_expanded(3:lres_land_grid%n_lon+2,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(:,:)
-
-      geo_lonex(2) = lres_land_grid%p_lons(1)-dlon
-      geo_lonex(1) = lres_land_grid%p_lons(1)-2*dlon
-      geo_lonex(lres_land_grid%n_lon+3) = lres_land_grid%p_lons(lres_land_grid%n_lon)+1*dlon
-      geo_lonex(lres_land_grid%n_lon+4) = lres_land_grid%p_lons(lres_land_grid%n_lon)+2*dlon
-
-      ! geo_expanded(2,:) = lres_land_grid%s_elevation(lres_land_grid%n_lon,:)
-      geo_expanded(2,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(lres_land_grid%n_lon,:)
-      ! geo_expanded(1,:) = lres_land_grid%s_elevation(lres_land_grid%n_lon-1,:)
-      geo_expanded(1,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(lres_land_grid%n_lon-1,:)
-      !geo_expanded(lres_land_grid%n_lon+3,:) = lres_land_grid%s_elevation(1,:)
-      geo_expanded(lres_land_grid%n_lon+3,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(1,:)
-      !geo_expanded(lres_land_grid%n_lon+4,:) = lres_land_grid%s_elevation(2,:)
-      geo_expanded(lres_land_grid%n_lon+4,:) = lres_land_grid%surf_grid_vars(lres_land_grid%indx_elevation)%var_data(2,:)
-      write(*,*) geo_lonex
-      ! read(*,*)
-
-      DO  iyi = 1, zoom_grid%n_lat
-        DO  ixi = 1, zoom_grid%n_lon
-          IF (ixi == 1.AND.iyi == 1) THEN
-            md = 1
-          ELSE
-            md = 2
-          END IF
-
-          CALL rgbi3p(md,lres_land_grid%n_lon+2*expa,lres_land_grid%n_lat, geo_lonex ,lres_land_grid%p_lats &
-                     ,geo_expanded, 1, zoom_grid%p_lons(ixi), zoom_grid%p_lats(iyi), interpolated(ixi,iyi,1), ier)
-          IF (ier > 0) STOP
-!          dzi(ixi,iyi) = zi(ixi,iyi) - zie(ixi,iyi)
-        END DO
-      END DO
-
-!      write(*,*) "test", lres_land_grid%s_elevation -           &
-!                 RESHAPE(RESHAPE(lres_land_grid%s_elevation,    &
-!                  (/lres_land_grid%n_lon*lres_land_grid%n_lat/)),(/lres_land_grid%n_lon,lres_land_grid%n_lat/))
-
-      write(*,*) "result TOMS_760", ier
-#endif
-#if ( TOMS_760 == 2 )
       val_indx = lres_land_grid%indx_elevation
       resulting_val = bicubic_interpol(lres_land_grid, zoom_grid, interpol_one, val_indx)
       interpolated(:,:,1) = interpol_one(:,:)
