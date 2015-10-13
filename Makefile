@@ -60,9 +60,8 @@ SRC     = \
         Sub_Grid_Class.f90\
         toms760-wrapper.f90 \
         distance_great_circle.f90\
-        interpolate_mod.f90
-
-#         toms760.f90
+        interpolate_mod.f90\
+        module_test.f90
 
 OBJS    = $(SRC:.f90=.o)
 MODS    = ${SRC:.f90=.mod}
