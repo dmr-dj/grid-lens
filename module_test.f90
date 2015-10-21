@@ -58,7 +58,7 @@
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 
       module module_test
-      
+
        implicit none
        private
 
@@ -85,7 +85,7 @@
 
        use grid_class, only: surface_grid, surface_grid_init
        use sub_grid_class, only: sub_grid, sub_grid_init
-      
+
 #if (DGC_USE == 1)
        use interpolate_mod, only: interpolate_init, interpolate
 #endif
@@ -103,7 +103,7 @@
 !-----|--1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2----+----3-|
 
        logical             :: returnValue
-       
+
        type(surface_grid) :: lres_land_grid, hres_land_grid
        type(sub_grid)     :: zoom_grid
        logical            :: succeed = .false.
@@ -140,7 +140,7 @@
 !>    @bug Description of the stupid sticky bug that we know exist there but is not corrected yet!
 
 #define LRES 1
-#define HRES 1
+#define HRES 2
 
 #if ( LRES == 1 )
       input_file_l=""//trim(directory)//"regridedETOPO5-T21_out.nc"
@@ -179,8 +179,8 @@
 !      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=33.23d0,lat_max=77.5d0,lon_min=346.5d0,lon_max=30.9d0)
 
       succeed = &
-      !sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
-      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=-89.0d0,lat_max=89.0d0,lon_min=0.0d0,lon_max=360.0d0)
+      sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=35.0d0,lat_max=80.0d0,lon_min=340.0d0,lon_max=40.0d0)
+      !sub_grid_init(hres_land_grid,lres_land_grid,subg=zoom_grid,lat_min=-89.0d0,lat_max=89.0d0,lon_min=0.0d0,lon_max=360.0d0)
 
 #if (DGC_USE == 1)
 
@@ -209,7 +209,7 @@
 
 #if ( DGC_USE == 1 || TOMS_760 > 0 )
       allocate(interpolated(zoom_grid%n_lon,zoom_grid%n_lat,nbmois))
-#endif      
+#endif
 
 
       write(*,*) "Globality of grids: ", lres_land_grid%is_global, hres_land_grid%is_global
@@ -232,7 +232,7 @@
 #if (NCIO_USE == 1)
 
       filename = "outputdata/out_highres.nc"
-      
+
       ! Create the netcdf file, write global attributes
       call nc_create(filename)
       call nc_write_attr(filename,"title",                              &
