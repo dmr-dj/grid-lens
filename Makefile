@@ -11,6 +11,7 @@
 objdir = .obj
 
 # Command-line options at make call
+ifort ?= 0
 debug ?= 1
 
 FC = gfortran
@@ -18,8 +19,8 @@ FC = gfortran
 LIBSYS = /usr/lib
 INCSYS = /usr/include
 
-LIBNETCDF = -I $(INCSYS) -L$(LIBSYS) -lnetcdff -lnetcdf
-LIBNCIO   = -I../ncio/.obj -L../ncio -lncio
+LIBNETCDF = -I$(INCSYS) -L$(LIBSYS) -lnetcdff -lnetcdf
+LIBNCIO   = -Wl,-rpath=../ncio -I../ncio/.obj -L../ncio -lncio
 
 SRCFAGS =
 OBJFAGS = -J$(objdir) -I$(objdir)
@@ -32,25 +33,22 @@ LIBS= $(LIBNCIO) $(LIBNETCDF)
 
 DFLAGS = -O3 -cpp -ffixed-line-length-132 -fno-align-commons -fdefault-real-8 -fdefault-double-8
 ifeq ($(debug), 1)
-    DFLAGS  = -g -pg -cpp -Wall -ffixed-line-length-132 -fno-align-commons -fdefault-real-8 -fdefault-double-8
-# -w -p -ggdb -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -fcheck=all
+    DFLAGS  = -g -pg -cpp -Wall -ffixed-line-length-132 -fno-align-commons -fdefault-real-8 -fdefault-double-8 -w -p -ggdb -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -fcheck=all
 endif
 
-# ifeq ($(ifort),1)
-# 	## IFORT OPTIONS ##
-#     FC = ifort
-#     LIB = /home/robinson/apps/netcdf/netcdf/lib
-#     INC = /home/robinson/apps/netcdf/netcdf/include
-# 
-# 	FLAGS        = -module $(objdir) -L$(objdir) -I$(INC)
-# 	LFLAGS		 = -L$(LIB) -lnetcdf
-# 
-# 	DFLAGS   = -vec-report0 -O3
-# 	ifeq ($(debug), 1)
-# 	    DFLAGS   = -C -traceback -ftrapuv -fpe0 -check all -vec-report0
-# 	    # -w
-# 	endif
-# endif
+ifeq ($(ifort),1)
+	## IFORT OPTIONS ##
+    FC = ifort
+    LIBNETCDF = -I /usr/local/install/netcdf-4.1.1/include -L/usr/local/install/netcdf-4.1.1/lib -lnetcdf -lnetcdff  -L/lib64
+
+	FLAGS        = -module $(objdir) -L$(objdir) -I$(INC)
+	DFLAGS       = -cpp -vec-report0 -132
+	ifeq ($(debug), 1)
+	    DFLAGS   = -C -traceback -ftrapuv -fpe0 -check all -vec-report0
+	    # -w
+	endif
+    OBJFAGS = -I$(objdir)
+endif
 # 
 
 

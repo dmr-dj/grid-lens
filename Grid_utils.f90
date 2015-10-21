@@ -32,6 +32,9 @@
 
       if (present(strtpt)) then
         i = strtpt
+        if (i <= lbound(tableau,1)+1 ) then
+          i = lbound(tableau,1)+1
+        endif
       else
         i = lbound(tableau,1)+1
       endif
@@ -45,7 +48,7 @@
 
        im = i
 
-       i = i + transfer(abs(valeur-left).GT.abs(valeur-right),i)
+       i = i + abs(transfer(abs(valeur-left).GT.abs(valeur-right),i))
 
       enddo
 
